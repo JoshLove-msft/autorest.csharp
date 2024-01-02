@@ -27,6 +27,7 @@ using AutoRest.CSharp.Mgmt.Decorator;
 using AutoRest.CSharp.Mgmt.Output;
 using AutoRest.CSharp.Output.Models;
 using AutoRest.CSharp.Output.Models.Serialization;
+using AutoRest.CSharp.Output.Models.Serialization.Bicep;
 using AutoRest.CSharp.Output.Models.Serialization.Json;
 using AutoRest.CSharp.Output.Models.Serialization.Xml;
 using AutoRest.CSharp.Output.Models.Shared;
@@ -114,7 +115,7 @@ namespace AutoRest.CSharp.Common.Output.Builders
             }
         }
 
-        public static IEnumerable<Method> BuildIModelMethods(SerializableObjectType model, JsonObjectSerialization? json, XmlObjectSerialization? xml)
+        public static IEnumerable<Method> BuildIModelMethods(SerializableObjectType model, JsonObjectSerialization? json, XmlObjectSerialization? xml, BicepObjectSerialization? bicep)
         {
             // we do not need this if model reader writer feature is not enabled
             if (!Configuration.UseModelReaderWriter)
@@ -133,7 +134,7 @@ namespace AutoRest.CSharp.Common.Output.Builders
             yield return new
             (
                 new MethodSignature(nameof(IPersistableModel<object>.Write), null, null, MethodSignatureModifiers.None, typeof(BinaryData), null, new[] { KnownParameters.Serializations.Options }, ExplicitInterface: iModelTInterface),
-                BuildModelWriteMethodBody(json, xml, options, iModelTInterface).ToArray()
+                BuildModelWriteMethodBody(json, xml, bicep, options, iModelTInterface).ToArray()
             );
 
             // T IPersistableModel<T>.Create(BinaryData data, ModelReaderWriterOptions options)
@@ -141,7 +142,7 @@ namespace AutoRest.CSharp.Common.Output.Builders
             yield return new
             (
                 new MethodSignature(nameof(IPersistableModel<object>.Create), null, null, MethodSignatureModifiers.None, typeOfT, null, new[] { KnownParameters.Serializations.Data, KnownParameters.Serializations.Options }, ExplicitInterface: iModelTInterface),
-                BuildModelCreateMethodBody(model, json != null, xml != null, data, options, iModelTInterface).ToArray()
+                BuildModelCreateMethodBody(model, json != null, xml != null, bicep != null, data, options, iModelTInterface).ToArray()
             );
 
             // ModelReaderWriterFormat IPersistableModel<T>.GetFormatFromOptions(ModelReaderWriterOptions options)
@@ -179,7 +180,10 @@ namespace AutoRest.CSharp.Common.Output.Builders
                 );
             }
 
-            static IEnumerable<MethodBodyStatement> BuildModelWriteMethodBody(JsonObjectSerialization? json, XmlObjectSerialization? xml, ModelReaderWriterOptionsExpression options, CSharpType iModelTInterface)
+            // TODO should this be moved into SerializationBuilder or a more generic MethodBuilder now that it supports xml (and bicep)
+            static IEnumerable<MethodBodyStatement> BuildModelWriteMethodBody(JsonObjectSerialization? json,
+                XmlObjectSerialization? xml, BicepObjectSerialization? bicep,
+                ModelReaderWriterOptionsExpression options, CSharpType iModelTInterface)
             {
                 // var format = options.Format == "W" ? GetFormatFromOptions(options) : options.Format;
                 yield return Serializations.GetConcreteFormat(options, iModelTInterface, out var format);
@@ -191,9 +195,30 @@ namespace AutoRest.CSharp.Common.Output.Builders
                 if (json != null)
                 {
                     var jsonCase = new SwitchCase(Serializations.JsonFormat,
-                        Return(new InvokeStaticMethodExpression(typeof(ModelReaderWriter), nameof(ModelReaderWriter.Write), new[] { This, options }))
-                        );
+                        Return(new InvokeStaticMethodExpression(typeof(ModelReaderWriter),
+                            nameof(ModelReaderWriter.Write), new[] { This, options }))
+                    );
                     switchStatement.Add(jsonCase);
+                }
+
+                if (bicep != null)
+                {
+
+                    var bicepCase = new SwitchCase(
+                        Serializations.BicepFormat,
+                        Return(new InvokeInstanceMethodExpression(
+                            null,
+                            new MethodSignature(
+                                "SerializeBicep",
+                                null,
+                                null,
+                                MethodSignatureModifiers.Private,
+                                typeof(BinaryData),
+                                null,
+                                new Parameter[] { KnownParameters.Serializations.Options }),
+                            new[] { options }
+                        )));
+                    switchStatement.Add(bicepCase);
                 }
 
                 if (xml != null)
@@ -246,7 +271,7 @@ namespace AutoRest.CSharp.Common.Output.Builders
                 yield return switchStatement;
             }
 
-            static IEnumerable<MethodBodyStatement> BuildModelCreateMethodBody(SerializableObjectType model, bool hasJson, bool hasXml, BinaryDataExpression data, ModelReaderWriterOptionsExpression options, CSharpType iModelTInterface)
+            static IEnumerable<MethodBodyStatement> BuildModelCreateMethodBody(SerializableObjectType model, bool hasJson, bool hasXml, bool hasBicep, BinaryDataExpression data, ModelReaderWriterOptionsExpression options, CSharpType iModelTInterface)
             {
                 // var format = options.Format == "W" ? GetFormatFromOptions(options) : options.Format;
                 yield return Serializations.GetConcreteFormat(options, iModelTInterface, out var format);
@@ -275,6 +300,17 @@ namespace AutoRest.CSharp.Common.Output.Builders
                     var xmlCase = new SwitchCase(Serializations.XmlFormat,
                         Return(SerializableObjectTypeExpression.Deserialize(model, XElementExpression.Load(data.ToStream()), options)));
                     switchStatement.Add(xmlCase);
+                }
+
+                if (hasBicep)
+                {
+                    // throw new InvalidOperationException("Bicep deserialization is not supported for this type.");
+                    var bicepCase = new SwitchCase(
+                        Serializations.BicepFormat,
+                        Throw(
+                            New.Instance(typeof(InvalidOperationException),
+                            Literal("Bicep deserialization is not supported for this type."))));
+                    switchStatement.Add(bicepCase);
                 }
 
                 // default case

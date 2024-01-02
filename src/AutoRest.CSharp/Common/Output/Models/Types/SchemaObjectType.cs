@@ -16,6 +16,7 @@ using AutoRest.CSharp.Input;
 using AutoRest.CSharp.Input.Source;
 using AutoRest.CSharp.Output.Builders;
 using AutoRest.CSharp.Output.Models.Requests;
+using AutoRest.CSharp.Output.Models.Serialization.Bicep;
 using AutoRest.CSharp.Output.Models.Serialization.Json;
 using AutoRest.CSharp.Output.Models.Serialization.Xml;
 using AutoRest.CSharp.Output.Models.Shared;
@@ -27,7 +28,7 @@ namespace AutoRest.CSharp.Output.Models.Types
 {
     internal class SchemaObjectType : SerializableObjectType
     {
-        private readonly SerializationBuilder _serializationBuilder;
+        protected SerializationBuilder _serializationBuilder;
         private readonly TypeFactory _typeFactory;
         private readonly SchemaTypeUsage _usage;
 
@@ -733,6 +734,11 @@ namespace AutoRest.CSharp.Output.Models.Types
         protected override XmlObjectSerialization? BuildXmlSerialization()
         {
             return _supportedSerializationFormats.Contains(KnownMediaType.Xml) ? _serializationBuilder.BuildXmlObjectSerialization(ObjectSchema, this) : null;
+        }
+
+        protected override BicepObjectSerialization? BuildBicepSerialization()
+        {
+            return null;
         }
 
         private SerializableObjectType? BuildDefaultDerivedType()

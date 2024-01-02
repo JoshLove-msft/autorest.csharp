@@ -7,6 +7,7 @@ using AutoRest.CSharp.Generation.Types;
 using AutoRest.CSharp.Input;
 using AutoRest.CSharp.Mgmt.Decorator;
 using AutoRest.CSharp.Output.Builders;
+using AutoRest.CSharp.Output.Models.Serialization.Bicep;
 
 namespace AutoRest.CSharp.Mgmt.Output
 {
@@ -21,6 +22,7 @@ namespace AutoRest.CSharp.Mgmt.Output
             : base(schema, name, nameSpace)
         {
             _clientPrefix = schema.Name;
+            _serializationBuilder = new SerializationBuilder();
         }
 
         protected override bool IsResourceType => true;
@@ -68,5 +70,10 @@ namespace AutoRest.CSharp.Mgmt.Output
         }
 
         internal virtual bool ShouldSetResourceIdentifier => TypeOfId == null;
+
+        protected override BicepObjectSerialization? BuildBicepSerialization()
+        {
+            return _serializationBuilder.BuildBicepObjectSerialization(this);
+        }
     }
 }

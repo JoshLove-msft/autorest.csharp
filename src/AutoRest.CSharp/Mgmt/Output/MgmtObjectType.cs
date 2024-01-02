@@ -11,6 +11,7 @@ using AutoRest.CSharp.Mgmt.AutoRest;
 using AutoRest.CSharp.Mgmt.Decorator;
 using AutoRest.CSharp.Mgmt.Report;
 using AutoRest.CSharp.Output.Builders;
+using AutoRest.CSharp.Output.Models.Serialization.Bicep;
 using AutoRest.CSharp.Output.Models.Types;
 using Microsoft.CodeAnalysis;
 
@@ -325,6 +326,11 @@ namespace AutoRest.CSharp.Mgmt.Output
                 throw new ArgumentException("argumentIndex out of range");
             var argType = otProperty.ValueType.Arguments[argumentIndex];
             return $"{this.GetFullSerializedName(otProperty)}.Arguments[{argumentIndex}-{argType.Namespace}.{argType.Name}]";
+        }
+
+        protected override BicepObjectSerialization? BuildBicepSerialization()
+        {
+            return _serializationBuilder.BuildBicepObjectSerialization(this);
         }
     }
 }
