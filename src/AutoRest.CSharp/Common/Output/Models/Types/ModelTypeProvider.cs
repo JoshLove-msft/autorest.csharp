@@ -17,6 +17,7 @@ using AutoRest.CSharp.Input.Source;
 using AutoRest.CSharp.Output.Builders;
 using AutoRest.CSharp.Output.Models.Requests;
 using AutoRest.CSharp.Output.Models.Serialization;
+using AutoRest.CSharp.Output.Models.Serialization.Bicep;
 using AutoRest.CSharp.Output.Models.Serialization.Json;
 using AutoRest.CSharp.Output.Models.Serialization.Xml;
 using AutoRest.CSharp.Output.Models.Shared;
@@ -484,6 +485,11 @@ namespace AutoRest.CSharp.Output.Models.Types
         }
 
         protected override XmlObjectSerialization? BuildXmlSerialization()
+        {
+            return null;
+        }
+
+        protected override BicepObjectSerialization? BuildBicepSerialization()
         {
             return null;
         }

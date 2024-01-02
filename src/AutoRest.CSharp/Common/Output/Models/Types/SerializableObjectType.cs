@@ -80,10 +80,6 @@ namespace AutoRest.CSharp.Common.Output.Models.Types
         protected abstract bool EnsureIncludeSerializer();
         protected abstract bool EnsureIncludeDeserializer();
 
-
-        protected abstract bool EnsureIncludeSerializer();
-        protected abstract bool EnsureIncludeDeserializer();
-
         // TODO -- despite this is actually a field if present, we have to make it a property to work properly with other functionalities in the generator, such as the `CodeWriter.WriteInitialization` method
         public virtual ObjectTypeProperty? RawDataField => null;
 
