@@ -29,6 +29,7 @@ namespace AutoRest.CSharp.Common.Input
             public const string PublicClients = "public-clients";
             public const string ModelNamespace = "model-namespace";
             public const string HeadAsBoolean = "head-as-boolean";
+            public const string SkipCSProj = "skip-csproj";
             public const string SkipCSProjPackageReference = "skip-csproj-packagereference";
             public const string Generation1ConvenienceClient = "generation1-convenience-client";
             public const string SingleTopLevelClient = "single-top-level-client";
@@ -40,7 +41,6 @@ namespace AutoRest.CSharp.Common.Input
             public const string DisablePaginationTopRenaming = "disable-pagination-top-renaming";
             public const string SuppressAbstractBaseClasses = "suppress-abstract-base-class";
             public const string UnreferencedTypesHandling = "unreferenced-types-handling";
-            public const string UseOverloadsBetweenProtocolAndConvenience = "use-overloads-between-protocol-and-convenience";
             public const string KeepNonOverloadableProtocolSignature = "keep-non-overloadable-protocol-signature";
             public const string ModelFactoryForHlc = "model-factory-for-hlc";
             public const string GenerateModelFactory = "generate-model-factory";
@@ -75,6 +75,7 @@ namespace AutoRest.CSharp.Common.Input
             bool publicClients,
             bool modelNamespace,
             bool headAsBoolean,
+            bool skipCSProj,
             bool skipCSProjPackageReference,
             bool generation1ConvenienceClient,
             bool singleTopLevelClient,
@@ -87,7 +88,6 @@ namespace AutoRest.CSharp.Common.Input
             bool useModelReaderWriter,
             IReadOnlyList<string> modelFactoryForHlc,
             UnreferencedTypesHandlingOption unreferencedTypesHandling,
-            bool useOverloadsBetweenProtocolAndConvenience,
             bool keepNonOverloadableProtocolSignature,
             string? projectFolder,
             string? existingProjectFolder,
@@ -111,6 +111,7 @@ namespace AutoRest.CSharp.Common.Input
             PublicClients = publicClients || AzureArm;
             ModelNamespace = azureArm || modelNamespace;
             HeadAsBoolean = headAsBoolean;
+            SkipCSProj = skipCSProj;
             SkipCSProjPackageReference = skipCSProjPackageReference;
             Generation1ConvenienceClient = generation1ConvenienceClient;
             SingleTopLevelClient = singleTopLevelClient;
@@ -118,7 +119,6 @@ namespace AutoRest.CSharp.Common.Input
             PublicDiscriminatorProperty = publicDiscriminatorProperty;
             DeserializeNullCollectionAsNullValue = deserializeNullCollectionAsNullValue;
             UnreferencedTypesHandling = unreferencedTypesHandling;
-            UseOverloadsBetweenProtocolAndConvenience = useOverloadsBetweenProtocolAndConvenience;
             KeepNonOverloadableProtocolSignature = keepNonOverloadableProtocolSignature;
             ShouldTreatBase64AsBinaryData = !azureArm && !generation1ConvenienceClient ? shouldTreatBase64AsBinaryData : false;
             UseCoreDataFactoryReplacements = useCoreDataFactoryReplacements;
@@ -133,7 +133,7 @@ namespace AutoRest.CSharp.Common.Input
             if (publicClients && generation1ConvenienceClient && isAzureProject)
             {
                 var binaryLocation = typeof(Configuration).Assembly.Location;
-                if (!binaryLocation.EndsWith(Path.Combine("artifacts", "bin", "AutoRest.CSharp", "Debug", "net6.0", "AutoRest.CSharp.dll")))
+                if (!binaryLocation.EndsWith(Path.Combine("artifacts", "bin", "AutoRest.CSharp", "Debug", "net7.0", "AutoRest.CSharp.dll")))
                 {
                     if (_absoluteProjectFolder is not null)
                     {
@@ -245,6 +245,7 @@ namespace AutoRest.CSharp.Common.Input
         public static bool PublicClients { get; private set; }
         public static bool ModelNamespace { get; private set; }
         public static bool HeadAsBoolean { get; private set; }
+        public static bool SkipCSProj { get; private set; }
         public static bool SkipCSProjPackageReference { get; private set; }
         public static bool Generation1ConvenienceClient { get; private set; }
         public static bool SingleTopLevelClient { get; private set; }
@@ -268,7 +269,6 @@ namespace AutoRest.CSharp.Common.Input
         /// Default value is false, where we will construct an empty collection (ChangeTrackingList or ChangeTrackingDictionary) if we get null value for collections in the payload
         /// </summary>
         public static bool DeserializeNullCollectionAsNullValue { get; private set; }
-        public static bool UseOverloadsBetweenProtocolAndConvenience { get; private set; }
         public static bool KeepNonOverloadableProtocolSignature { get; private set; }
 
         private static IReadOnlyList<string>? _oldModelFactoryEntries;
@@ -312,6 +312,7 @@ namespace AutoRest.CSharp.Common.Input
                 publicClients: GetOptionBoolValue(autoRest, Options.PublicClients),
                 modelNamespace: GetOptionBoolValue(autoRest, Options.ModelNamespace),
                 headAsBoolean: GetOptionBoolValue(autoRest, Options.HeadAsBoolean),
+                skipCSProj: GetOptionBoolValue(autoRest, Options.SkipCSProj),
                 skipCSProjPackageReference: GetSkipCSProjPackageReferenceOption(autoRest),
                 generation1ConvenienceClient: GetGeneration1ConvenienceClientOption(autoRest),
                 singleTopLevelClient: GetOptionBoolValue(autoRest, Options.SingleTopLevelClient),
@@ -322,7 +323,6 @@ namespace AutoRest.CSharp.Common.Input
                 deserializeNullCollectionAsNullValue: GetOptionBoolValue(autoRest, Options.DeserializeNullCollectionAsNullValue),
                 modelFactoryForHlc: autoRest.GetValue<string[]?>(Options.ModelFactoryForHlc).GetAwaiter().GetResult() ?? Array.Empty<string>(),
                 unreferencedTypesHandling: GetOptionEnumValue<UnreferencedTypesHandlingOption>(autoRest, Options.UnreferencedTypesHandling),
-                useOverloadsBetweenProtocolAndConvenience: GetOptionBoolValue(autoRest, Options.UseOverloadsBetweenProtocolAndConvenience),
                 keepNonOverloadableProtocolSignature: GetOptionBoolValue(autoRest, Options.KeepNonOverloadableProtocolSignature),
                 useCoreDataFactoryReplacements: GetOptionBoolValue(autoRest, Options.UseCoreDataFactoryReplacements),
                 useModelReaderWriter: GetOptionBoolValue(autoRest, Options.UseModelReaderWriter),
@@ -382,6 +382,8 @@ namespace AutoRest.CSharp.Common.Input
                     return true;
                 case Options.HeadAsBoolean:
                     return false;
+                case Options.SkipCSProj:
+                    return false;
                 case Options.SkipCSProjPackageReference:
                     return false;
                 case Options.Generation1ConvenienceClient:
@@ -396,8 +398,6 @@ namespace AutoRest.CSharp.Common.Input
                     return true;
                 case Options.PublicDiscriminatorProperty:
                     return false;
-                case Options.UseOverloadsBetweenProtocolAndConvenience:
-                    return true;
                 case Options.KeepNonOverloadableProtocolSignature:
                     return false;
                 case Options.ShouldTreatBase64AsBinaryData:
@@ -474,6 +474,7 @@ namespace AutoRest.CSharp.Common.Input
                 ReadOption(root, Options.PublicClients),
                 ReadOption(root, Options.ModelNamespace),
                 ReadOption(root, Options.HeadAsBoolean),
+                ReadOption(root, Options.SkipCSProj),
                 ReadOption(root, Options.SkipCSProjPackageReference),
                 ReadOption(root, Options.Generation1ConvenienceClient),
                 ReadOption(root, Options.SingleTopLevelClient),
@@ -486,7 +487,6 @@ namespace AutoRest.CSharp.Common.Input
                 ReadOption(root, Options.UseModelReaderWriter),
                 oldModelFactoryEntries,
                 ReadEnumOption<UnreferencedTypesHandlingOption>(root, Options.UnreferencedTypesHandling),
-                ReadOption(root, Options.UseOverloadsBetweenProtocolAndConvenience),
                 ReadOption(root, Options.KeepNonOverloadableProtocolSignature),
                 projectPath ?? ReadStringOption(root, Options.ProjectFolder),
                 existingProjectFolder,
@@ -536,13 +536,13 @@ namespace AutoRest.CSharp.Common.Input
             WriteIfNotDefault(writer, Options.PublicClients, PublicClients);
             WriteIfNotDefault(writer, Options.ModelNamespace, ModelNamespace);
             WriteIfNotDefault(writer, Options.HeadAsBoolean, HeadAsBoolean);
+            WriteIfNotDefault(writer, Options.SkipCSProj, SkipCSProj);
             WriteIfNotDefault(writer, Options.SkipCSProjPackageReference, SkipCSProjPackageReference);
             WriteIfNotDefault(writer, Options.Generation1ConvenienceClient, Generation1ConvenienceClient);
             WriteIfNotDefault(writer, Options.SingleTopLevelClient, SingleTopLevelClient);
             WriteIfNotDefault(writer, Options.GenerateModelFactory, GenerateModelFactory);
             writer.WriteNonEmptyArray(Options.ModelFactoryForHlc, ModelFactoryForHlc);
             WriteIfNotDefault(writer, Options.UnreferencedTypesHandling, UnreferencedTypesHandling);
-            WriteIfNotDefault(writer, Options.UseOverloadsBetweenProtocolAndConvenience, UseOverloadsBetweenProtocolAndConvenience);
             WriteIfNotDefault(writer, Options.ProjectFolder, RelativeProjectFolder);
             WriteIfNotDefault(writer, Options.UseCoreDataFactoryReplacements, UseCoreDataFactoryReplacements);
             WriteIfNotDefault(writer, Options.UseModelReaderWriter, UseModelReaderWriter);
@@ -633,19 +633,6 @@ namespace AutoRest.CSharp.Common.Input
 
             return null;
         }
-
-        // Fetch CSharpProj configuration from Configuration
-        internal static CSharpProjConfiguration ToCSharpProjConfiguration() => new CSharpProjConfiguration
-        (
-            AbsoluteProjectFolder: AbsoluteProjectFolder,
-            AzureArm: AzureArm,
-            IsMgmtTestProject: MgmtTestConfiguration is not null,
-            LibraryName: LibraryName,
-            Namespace: Namespace,
-            SkipCSProjPackageReference: SkipCSProjPackageReference,
-            RelativeProjectFolder: RelativeProjectFolder,
-            Generation1ConvenienceClient: Generation1ConvenienceClient
-        );
 
         internal static string GetOutputFolderOption(IPluginCommunication autoRest) => TrimFileSuffix(GetRequiredOption<string>(autoRest, Options.OutputFolder));
         internal static string? GetProjectFolderOption(IPluginCommunication autoRest) => autoRest.GetValue<string?>(Options.ProjectFolder).GetAwaiter().GetResult();

@@ -45,7 +45,7 @@ namespace AutoRest.CSharp.Output.Models.Types
         {
             _context = context;
             DefaultName = objectSchema.CSharpName();
-            DefaultNamespace = GetDefaultNamespace(objectSchema.Extensions?.Namespace, context);
+            DefaultNamespace = GetDefaultModelNamespace(objectSchema.Extensions?.Namespace, context.DefaultNamespace);
             ObjectSchema = objectSchema;
             _typeFactory = context.TypeFactory;
             _serializationBuilder = new SerializationBuilder();
@@ -81,7 +81,6 @@ namespace AutoRest.CSharp.Output.Models.Types
         protected override string DefaultName { get; }
         protected override string DefaultNamespace { get; }
         protected override string DefaultAccessibility { get; } = "public";
-        protected override TypeKind TypeKind => IsStruct ? TypeKind.Struct : TypeKind.Class;
 
         private SerializableObjectType? _defaultDerivedType;
         private bool _hasCalculatedDefaultDerivedType;
@@ -89,9 +88,7 @@ namespace AutoRest.CSharp.Output.Models.Types
 
         protected override bool IsAbstract => !Configuration.SuppressAbstractBaseClasses.Contains(DefaultName) && ObjectSchema.Discriminator?.All != null && ObjectSchema.Parents?.All.Count == 0;
 
-        public bool IsInheritableCommonType => ObjectSchema != null &&
-            ObjectSchema.Extensions != null &&
-            (ObjectSchema.Extensions.MgmtReferenceType || ObjectSchema.Extensions.MgmtTypeReferenceType);
+        public bool IsInheritableCommonType => ObjectSchema is { Extensions: { } extensions } && (extensions.MgmtReferenceType || extensions.MgmtTypeReferenceType);
 
         public override ObjectTypeProperty? AdditionalPropertiesProperty
         {
@@ -105,10 +102,10 @@ namespace AutoRest.CSharp.Output.Models.Types
                 // We use a $ prefix here as AdditionalProperties comes from a swagger concept
                 // and not a swagger model/operation name to disambiguate from a possible property with
                 // the same name.
-                SourceMemberMapping? memberMapping = _sourceTypeMapping?.GetForMember("$AdditionalProperties");
+                var existingMember = _sourceTypeMapping?.GetMemberByOriginalName("$AdditionalProperties");
 
                 _additionalPropertiesProperty = new ObjectTypeProperty(
-                    BuilderHelpers.CreateMemberDeclaration("AdditionalProperties", ImplementsDictionaryType, "public", memberMapping?.ExistingMember, _typeFactory),
+                    BuilderHelpers.CreateMemberDeclaration("AdditionalProperties", ImplementsDictionaryType, "public", existingMember, _typeFactory),
                     "Additional Properties",
                     true,
                     null
@@ -259,7 +256,7 @@ namespace AutoRest.CSharp.Output.Models.Types
 
             return new ObjectTypeConstructor(
                 signature,
-                serializationInitializers.ToArray(),
+                serializationInitializers,
                 baseSerializationCtor);
         }
 
@@ -285,6 +282,11 @@ namespace AutoRest.CSharp.Output.Models.Types
 
             foreach (var property in Properties)
             {
+                // we do not need to add intialization for raw data field
+                if (property == RawDataField)
+                {
+                    continue;
+                }
                 // Only required properties that are not discriminators go into default ctor
                 // skip the flattened properties, we should never include them in the constructors
                 if (property == Discriminator?.Property || property is FlattenedObjectTypeProperty)
@@ -370,8 +372,8 @@ namespace AutoRest.CSharp.Output.Models.Types
             return new ObjectTypeConstructor(
                 Type,
                 IsAbstract ? Protected : _usage.HasFlag(SchemaTypeUsage.Input) ? Public : Internal,
-                defaultCtorParameters.ToArray(),
-                defaultCtorInitializers.ToArray(),
+                defaultCtorParameters,
+                defaultCtorInitializers,
                 baseCtor);
         }
 
@@ -506,9 +508,9 @@ namespace AutoRest.CSharp.Output.Models.Types
         protected ObjectTypeProperty CreateProperty(Property property)
         {
             var name = BuilderHelpers.DisambiguateName(Type, property.CSharpName());
-            SourceMemberMapping? memberMapping = _sourceTypeMapping?.GetForMember(name);
+            var existingMember = _sourceTypeMapping?.GetMemberByOriginalName(name);
 
-            var serializationMapping = _sourceTypeMapping?.GetForMemberSerialization(memberMapping?.ExistingMember);
+            var serializationMapping = _sourceTypeMapping?.GetForMemberSerialization(existingMember);
 
             var accessibility = property.IsDiscriminator == true ? "internal" : "public";
 
@@ -529,7 +531,7 @@ namespace AutoRest.CSharp.Output.Models.Types
                 name,
                 propertyType,
                 accessibility,
-                memberMapping?.ExistingMember,
+                existingMember,
                 _typeFactory);
 
             var type = memberDeclaration.Type;
@@ -728,7 +730,7 @@ namespace AutoRest.CSharp.Output.Models.Types
 
         protected override JsonObjectSerialization? BuildJsonSerialization()
         {
-            return _supportedSerializationFormats.Contains(KnownMediaType.Json) ? _serializationBuilder.BuildJsonObjectSerialization(this) : null;
+            return _supportedSerializationFormats.Contains(KnownMediaType.Json) ? _serializationBuilder.BuildJsonObjectSerialization(ObjectSchema, this) : null;
         }
 
         protected override XmlObjectSerialization? BuildXmlSerialization()

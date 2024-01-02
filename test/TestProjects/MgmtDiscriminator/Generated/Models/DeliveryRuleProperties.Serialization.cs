@@ -5,28 +5,16 @@
 
 #nullable disable
 
-using System;
-using System.ClientModel;
-using System.ClientModel.Primitives;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using Azure.Core;
 
 namespace MgmtDiscriminator.Models
 {
-    public partial class DeliveryRuleProperties : IUtf8JsonSerializable, IJsonModel<DeliveryRuleProperties>, IPersistableModel<DeliveryRuleProperties>
+    public partial class DeliveryRuleProperties : IUtf8JsonSerializable
     {
-        void IUtf8JsonSerializable.Write(Utf8JsonWriter writer) => ((IJsonModel<DeliveryRuleProperties>)this).Write(writer, new ModelReaderWriterOptions("W"));
-
-        void IJsonModel<DeliveryRuleProperties>.Write(Utf8JsonWriter writer, ModelReaderWriterOptions options)
+        void IUtf8JsonSerializable.Write(Utf8JsonWriter writer)
         {
-            var format = options.Format == "W" ? ((IPersistableModel<DeliveryRuleProperties>)this).GetFormatFromOptions(options) : options.Format;
-            if (format != "J")
-            {
-                throw new InvalidOperationException($"The model {nameof(DeliveryRuleProperties)} does not support '{format}' format.");
-            }
-
             writer.WriteStartObject();
             if (Optional.IsDefined(Order))
             {
@@ -64,45 +52,11 @@ namespace MgmtDiscriminator.Models
                 writer.WritePropertyName("pet"u8);
                 writer.WriteObjectValue(Pet);
             }
-            if (options.Format != "W" && Optional.IsDefined(Foo))
-            {
-                writer.WritePropertyName("foo"u8);
-                writer.WriteStringValue(Foo);
-            }
-            if (options.Format != "W" && _serializedAdditionalRawData != null)
-            {
-                foreach (var item in _serializedAdditionalRawData)
-                {
-                    writer.WritePropertyName(item.Key);
-#if NET6_0_OR_GREATER
-				writer.WriteRawValue(item.Value);
-#else
-                    using (JsonDocument document = JsonDocument.Parse(item.Value))
-                    {
-                        JsonSerializer.Serialize(writer, document.RootElement);
-                    }
-#endif
-                }
-            }
             writer.WriteEndObject();
         }
 
-        DeliveryRuleProperties IJsonModel<DeliveryRuleProperties>.Create(ref Utf8JsonReader reader, ModelReaderWriterOptions options)
+        internal static DeliveryRuleProperties DeserializeDeliveryRuleProperties(JsonElement element)
         {
-            var format = options.Format == "W" ? ((IPersistableModel<DeliveryRuleProperties>)this).GetFormatFromOptions(options) : options.Format;
-            if (format != "J")
-            {
-                throw new InvalidOperationException($"The model {nameof(DeliveryRuleProperties)} does not support '{format}' format.");
-            }
-
-            using JsonDocument document = JsonDocument.ParseValue(ref reader);
-            return DeserializeDeliveryRuleProperties(document.RootElement, options);
-        }
-
-        internal static DeliveryRuleProperties DeserializeDeliveryRuleProperties(JsonElement element, ModelReaderWriterOptions options = null)
-        {
-            options ??= new ModelReaderWriterOptions("W");
-
             if (element.ValueKind == JsonValueKind.Null)
             {
                 return null;
@@ -113,8 +67,6 @@ namespace MgmtDiscriminator.Models
             Optional<IDictionary<string, DeliveryRuleAction>> extraMappingInfo = default;
             Optional<Pet> pet = default;
             Optional<string> foo = default;
-            IDictionary<string, BinaryData> serializedAdditionalRawData = default;
-            Dictionary<string, BinaryData> additionalPropertiesDictionary = new Dictionary<string, BinaryData>();
             foreach (var property in element.EnumerateObject())
             {
                 if (property.NameEquals("order"u8))
@@ -177,60 +129,8 @@ namespace MgmtDiscriminator.Models
                     foo = property.Value.GetString();
                     continue;
                 }
-                if (options.Format != "W")
-                {
-                    additionalPropertiesDictionary.Add(property.Name, BinaryData.FromString(property.Value.GetRawText()));
-                }
             }
-            serializedAdditionalRawData = additionalPropertiesDictionary;
-            return new DeliveryRuleProperties(Optional.ToNullable(order), conditions.Value, Optional.ToList(actions), Optional.ToDictionary(extraMappingInfo), pet.Value, foo.Value, serializedAdditionalRawData);
+            return new DeliveryRuleProperties(Optional.ToNullable(order), conditions.Value, Optional.ToList(actions), Optional.ToDictionary(extraMappingInfo), pet.Value, foo.Value);
         }
-
-        private BinaryData SerializeBicep(ModelReaderWriterOptions options)
-        {
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"Order: '{Order}'");
-            sb.AppendChildObject(Conditions, options);
-            sb.AppendChildObject(Actions, options);
-            sb.AppendChildObject(ExtraMappingInfo, options);
-            sb.AppendChildObject(Pet, options);
-            sb.AppendChildObject(Foo, options);
-            return BinaryData.FromString(sb.ToString());
-        }
-
-        BinaryData IPersistableModel<DeliveryRuleProperties>.Write(ModelReaderWriterOptions options)
-        {
-            var format = options.Format == "W" ? ((IPersistableModel<DeliveryRuleProperties>)this).GetFormatFromOptions(options) : options.Format;
-
-            switch (format)
-            {
-                case "J":
-                    return ModelReaderWriter.Write(this, options);
-                case "B":
-                    return SerializeBicep(options);
-                default:
-                    throw new InvalidOperationException($"The model {nameof(DeliveryRuleProperties)} does not support '{options.Format}' format.");
-            }
-        }
-
-        DeliveryRuleProperties IPersistableModel<DeliveryRuleProperties>.Create(BinaryData data, ModelReaderWriterOptions options)
-        {
-            var format = options.Format == "W" ? ((IPersistableModel<DeliveryRuleProperties>)this).GetFormatFromOptions(options) : options.Format;
-
-            switch (format)
-            {
-                case "J":
-                    {
-                        using JsonDocument document = JsonDocument.Parse(data);
-                        return DeserializeDeliveryRuleProperties(document.RootElement, options);
-                    }
-                case "B":
-                    throw new InvalidOperationException("Bicep deserialization is not supported for this type.");
-                default:
-                    throw new InvalidOperationException($"The model {nameof(DeliveryRuleProperties)} does not support '{options.Format}' format.");
-            }
-        }
-
-        string IPersistableModel<DeliveryRuleProperties>.GetFormatFromOptions(ModelReaderWriterOptions options) => "J";
     }
 }
